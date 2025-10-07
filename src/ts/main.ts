@@ -10,6 +10,7 @@ const edit_box_content = document.querySelector('.edit_box_btn') as HTMLDivEleme
 const search_btn = document.querySelector('.search_btn') as HTMLAnchorElement;
 const close_btn = document.querySelector('.close_btn') as HTMLAnchorElement;
 const card_box = document.querySelector('.card_box') as HTMLUListElement;
+const loading = document.querySelector('.loading') as HTMLDivElement;
 
 let gitHubName = "dogwantfly";
 const userInfo: TfetchUserDataType = {
@@ -20,7 +21,7 @@ const userInfo: TfetchUserDataType = {
   allPage: 0
 }
 const limit = 10;
-const page = 1;
+let page = 1;
 let reposArr: TApiReopsRes[] = [];
 const handEditNameFn = () => {
   edit_pen_btn.classList.add('hide');
@@ -76,6 +77,21 @@ const renderList = () => {
   });
   card_box.innerHTML = html;
 }
+const showRateLimitMessage = () => {
+  avatar.src = notFoundImage;
+  title_name.innerText = "已達到 GitHub API 速率限制，請稍後再試或設定 Token";
+  loading.classList.add('hide');
+};
+const isRateLimitError = (error: any): boolean => {
+  const status = error?.response?.status;
+  const remaining = error?.response?.headers?.['x-ratelimit-remaining'];
+  const message: string | undefined = error?.response?.data?.message || error?.message;
+  return (
+    status === 403 && (
+      remaining === '0' || (typeof message === 'string' && message.toLowerCase().includes('rate limit'))
+    )
+  );
+};
 const fetchUserData = async (name: string) => {
   try {
     const userData = await apiGetUserData(name);
@@ -85,11 +101,15 @@ const fetchUserData = async (name: string) => {
     userInfo.updatedAt = updated_at;
     userInfo.publicRepos = public_repos;
     userInfo.allPage = Math.ceil(public_repos / limit);
-    fetchRepos(gitHubName, page, limit);
+
     setUserDataDOM();
 
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
+    if (isRateLimitError(error)) {
+      showRateLimitMessage();
+      return;
+    }
     avatar.src = notFoundImage;
     title_name.innerText = "查無使用者";
     title_input.value = '';
@@ -99,17 +119,38 @@ const fetchUserData = async (name: string) => {
 }
 
 const fetchRepos = async (name: string,
-  page = 1,
+  pageIdx: number = page,
   per_page: number = limit) => {
   try {
     const response = await apiGetRepos(name,
-      page,
+      pageIdx,
       per_page);
-    reposArr = response.data;
+    reposArr = [...reposArr, ...response.data];
+    page += 1;
+    if (response.data.length < limit) {
+      loading.classList.add('hide');
+    }
     renderList();
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
+    if (isRateLimitError(error)) {
+      showRateLimitMessage();
+      // 停止後續載入
+      userInfo.allPage = 0;
+      return;
+    }
   }
 }
 
 fetchUserData(gitHubName);
+
+const intersectionObserver = new IntersectionObserver((entries) => {
+  if (page > userInfo.allPage) return;
+  if (entries[0].intersectionRatio <= 0) return;
+
+  loading.classList.remove('hide');
+  fetchRepos(gitHubName);
+  console.log("Loaded new items");
+});
+
+intersectionObserver.observe(loading);  
