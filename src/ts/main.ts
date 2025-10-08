@@ -31,14 +31,17 @@ const handEditNameFn = () => {
   edit_box_content.classList.add('show-flex');
   title_input.value = gitHubName;
 }
-const handSeachTextFn = () => {
+const handSeachTextFn = async () => {
   edit_pen_btn.classList.remove('hide');
   title_input.classList.add('hide');
   title_name.classList.remove('hide');
   edit_box_content.classList.add('hide');
   gitHubName = title_input.value;
   edit_box_content.classList.remove('show-flex');
-  fetchUserData(title_input.value);
+  page = 1;
+  reposArr = [];
+  await fetchUserData(title_input.value);
+  await fetchRepos(title_input.value, page);
 }
 const closeEditFn = () => {
   edit_pen_btn.classList.remove('hide');
@@ -92,7 +95,7 @@ const isRateLimitError = (error: any): boolean => {
     )
   );
 };
-const fetchUserData = async (name: string) => {
+const fetchUserData = async (name: string): Promise<boolean> => {
   try {
     const userData = await apiGetUserData(name);
     const { login, avatar_url, public_repos, updated_at }: TApiUserDataRes = userData.data;
@@ -103,17 +106,23 @@ const fetchUserData = async (name: string) => {
     userInfo.allPage = Math.ceil(public_repos / limit);
 
     setUserDataDOM();
-
+    return true;
   } catch (error: any) {
-    console.error(error);
+    // 兼容 axios 與自訂錯誤物件
+    const status = error?.response?.status ?? error?.status;
+    if (status === 404) {
+      avatar.src = notFoundImage;
+      title_name.innerText = "查無使用者";
+      title_input.value = '';
+      gitHubName = '';
+      return false;
+    }
     if (isRateLimitError(error)) {
       showRateLimitMessage();
-      return;
+      return false;
     }
-    avatar.src = notFoundImage;
-    title_name.innerText = "查無使用者";
-    title_input.value = '';
-    gitHubName = '';
+    console.error(error);
+    return false;
   }
 
 }
@@ -129,6 +138,8 @@ const fetchRepos = async (name: string,
     page += 1;
     if (response.data.length < limit) {
       loading.classList.add('hide');
+    } else {
+      loading.classList.remove('hide');
     }
     renderList();
   } catch (error: any) {
@@ -139,11 +150,14 @@ const fetchRepos = async (name: string,
       userInfo.allPage = 0;
       return;
     }
+    reposArr = []
+    renderList()
+    loading.classList.add('hide');
   }
 }
 
 fetchUserData(gitHubName);
-
+fetchRepos(userInfo.userName, page)
 const intersectionObserver = new IntersectionObserver((entries) => {
   if (page > userInfo.allPage) return;
   if (entries[0].intersectionRatio <= 0) return;
