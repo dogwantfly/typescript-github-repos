@@ -22,8 +22,6 @@ export const getElement = () => {
   }
 }
 
-import { gitHubName, setGitHubName, resetPage, resetRepos } from './useStateManager';
-
 
 export const userInfo: TfetchUserDataType = {
   userName: "dogwantfly",
@@ -36,23 +34,19 @@ export const userInfo: TfetchUserDataType = {
 export const useUIDOM = () => {
 
     const { edit_pen_btn, title_input, title_name, edit_box_content, card_box, avatar } = getElement();
-    const handEditNameFn = () => {
+    const handEditNameFn = (name: string) => {
       edit_pen_btn.classList.add('hide');
       title_input.classList.remove('hide');
       title_name.classList.add('hide');
       edit_box_content.classList.remove('hide');
       edit_box_content.classList.add('show-flex');
-      title_input.value = gitHubName;
+      title_input.value = name;
     }
     const handSeachTextFn = async () => {
       edit_pen_btn.classList.remove('hide');
       title_input.classList.add('hide');
       title_name.classList.remove('hide');
       edit_box_content.classList.add('hide');
-      setGitHubName(title_input.value);
-      // 切換使用者時重置分頁與清空列表狀態
-      resetPage();
-      resetRepos();
       edit_box_content.classList.remove('show-flex');
     }
     const closeEditFn = () => {

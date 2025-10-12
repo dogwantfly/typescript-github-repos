@@ -1,18 +1,27 @@
 import "../assets/css/style.css";
 import { getElement, userInfo, useUIDOM } from '../composables/useUiManager';
-import { gitHubName, page } from '../composables/useStateManager';
+import { gitHubName, page, setGitHubName, resetPage, resetRepos } from '../composables/useStateManager';
 import { fetchUserData, fetchRepos } from '../composables/useFetchData';
 
 
 
-const { edit_pen_btn, search_btn, close_btn, loading } = getElement();
+const { edit_pen_btn, search_btn, close_btn, loading, title_input, title_name } = getElement();
 
 
 
 
 const { handEditNameFn, handSeachTextFn, closeEditFn, setUserDataDOM } = useUIDOM();
-edit_pen_btn.addEventListener('click', handEditNameFn);
-search_btn.addEventListener('click', handSeachTextFn);
+edit_pen_btn.addEventListener('click', () => handEditNameFn(gitHubName));
+search_btn.addEventListener('click', () => {
+  handSeachTextFn()
+  setGitHubName(title_input.value);
+  title_name.innerText = title_input.value;
+  // 切換使用者時重置分頁與清空列表狀態
+  resetPage();
+  resetRepos();
+  init();
+  fetchRepos(title_input.value, page)
+});
 close_btn.addEventListener('click', closeEditFn);
 
 
@@ -54,7 +63,7 @@ const intersectionObserver = new IntersectionObserver((entries) => {
   if (entries[0].intersectionRatio <= 0) return;
 
   loading.classList.remove('hide');
-  fetchRepos(gitHubName);
+  fetchRepos(title_input.value);
   console.log("Loaded new items");
 });
 

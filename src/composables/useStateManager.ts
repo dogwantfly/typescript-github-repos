@@ -1,6 +1,6 @@
 // 集中管理跨模組共享的狀態（gitHubName / page / limit / reposArr）
 
-export let gitHubName: string = "dogwantfly";
+export let gitHubName = "dogwantfly";
 export const setGitHubName = (name: string) => {
 	gitHubName = name;
 };
